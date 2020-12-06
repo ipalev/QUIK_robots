@@ -31,7 +31,8 @@ arTools[3] = {
 -------------------------------------
 kOpen = -70																			-- значение коэффициента для открытия позиций(если превышает открываем позиции)
 kClose = -100																		-- значение коэффициента для закрытия позиций (если становится меньше закрываем позиции)
-profitClose = 10																	-- суммарный профит для закрытия позиции
+profitClose = 10																	-- суммарный профит по всем инструментам для закрытия позиции
+logCountLoop = 30																	-- номер прохода для логирования расчета коэффициента
 -------------------------------------														
 TRADE_ACC = "SPBFUT00APS"      														-- торговый счет 
 -------------------------служебные переменные----------------------------------------------------------------------------------------
@@ -40,7 +41,6 @@ logFileName = 'LogArbitrage_EXAMPLE' 												-- имя файла логов
 uniq_trans_id  = 0																	-- id транзакции
 k = nil																				-- расчетный коэффициент
 isOpenPosition = false																-- открыта позиция
-logCountLoop = 30																	-- номер прохода для логирования расчета коэффициента
 loop = 0																			-- номер прохода в цикле главной функцуии
 is_run = true
 dofile(getScriptPath().."\\func\\functions.lua")									-- подключаем набор функций
@@ -76,7 +76,7 @@ function main()
 				logStr = logStr..' priceTool'..key..' = '..prices[key]
 			end
 		end
-		if isOpenPosition == true then												-- при открытых позициях считаем профит
+		if isOpenPosition == true and profitClose > 0 then							-- при открытых позициях считаем профит, если задан profitClose
 			profit = 0
 			for key, tool in pairs(arTools) do
 				if tool['buy_sell'] == 'B' then										-- если покупали - из текущей цены вычитаем цену открытия позиции 
@@ -94,7 +94,7 @@ function main()
 			loop = 0
 		end
 		if k ~=nil and isOpenPosition == true and (k < kClose or profit > profitClose) then	-- если открыта позиция и коэффициент менее заданного в параметре kClose или профит достиг желаемого -> закрываем позицию
-			write_log("k = "..k.." -> close position", logFileName)
+			write_log("k = "..k.." -> close position  profit: "..profit, logFileName)
 			open_closePosition('close')
 		elseif k ~=nil and isOpenPosition == false and k > kOpen then				-- если позиция не открыта и коэффициент более заданного в параметре kOpen -> открываем позицию
 			write_log("k = "..k.." -> open position", logFileName)
