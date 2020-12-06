@@ -38,14 +38,16 @@ TRADE_ACC = "SPBFUT00APS"      														-- торговый счет
 profit = 0																			-- суммарный профит при открытых позициях
 logFileName = 'LogArbitrage_EXAMPLE' 												-- имя файла логов
 uniq_trans_id  = 0																	-- id транзакции
-k = 0																				-- расчетный коэффициент
+k = nil																				-- расчетный коэффициент
 isOpenPosition = false																-- открыта позиция
+logCountLoop = 30																	-- номер прохода для логирования расчета коэффициента
+loop = 0																			-- номер прохода в цикле главной функцуии
 is_run = true
 dofile(getScriptPath().."\\func\\functions.lua")									-- подключаем набор функций
 -------------------------------------------------------------------------------------------------------------------------------------
 
 function getK(arParam)																-- получаем коэффициент для принятия решения
-	if arParam == nil then
+	if arParam == nil or arParam[1] == nil then
 		return nil
 	end
 	for key, param in pairs(arParam) do												-- если хоть один параметр не получен - возвращаем nil
@@ -53,13 +55,15 @@ function getK(arParam)																-- получаем коэффициент
 			return nil
 		end
 	end
-	k = arParam[1] * 4809707787.4153 / arParam[2] / 152678.585651 - arParam[3]		-- формула расчета настраивается здесь
+	k = arParam[1] * 4809707787.4153 / arParam[2] / 152678.585651 - arParam[3]		-- формула расчета настраивается здесь(разделитель дробной части обязательно "точка")
 	return k
 end
 
 function main()
 	while is_run == true do
+		loop = loop + 1
 		local prices = {}
+		local logStr = ''
 		for key, tool in pairs(arTools) do											-- получаем нужные цены для каждого ниструмента из стаканов согласно заданным параметрам 
 			local bid_offer = ''
 			if isOpenPosition == true then											-- при открытой позиции берем противоположные значения из стакана (OFFER -> BID) для расчета k
@@ -68,6 +72,9 @@ function main()
 				bid_offer = tool['bid_offer']
 			end
 			prices[key] = getBestPriceFromGlass(tool['CLASS'], tool['SEC'], bid_offer)
+			if loop == logCountLoop and prices[key] ~= nil then 					-- готовим строку для лога (цены из стакана)
+				logStr = logStr..' priceTool'..key..' = '..prices[key]
+			end
 		end
 		if isOpenPosition == true then												-- при открытых позициях считаем профит
 			profit = 0
@@ -81,6 +88,11 @@ function main()
 			end
 		end
 		k = getK(prices)
+		if loop == logCountLoop and k ~= nil then												-- на каждом указанном в logCountLoop шаге пишем лог расчета коэффициента
+			logStr = logStr..' -> k = '..k
+			write_log(logStr, logFileName)
+			loop = 0
+		end
 		if k ~=nil and isOpenPosition == true and (k < kClose or profit > profitClose) then	-- если открыта позиция и коэффициент менее заданного в параметре kClose или профит достиг желаемого -> закрываем позицию
 			write_log("k = "..k.." -> close position", logFileName)
 			open_closePosition('close')
@@ -91,7 +103,6 @@ function main()
 			end
 			open_closePosition('open')
 		end
-		--message('k '..k,2)
 		sleep(500)
 	end
 end
@@ -119,6 +130,7 @@ function open_closePosition(open_close)												-- открываем или 
 		if price == math.floor(price) then											-- убираем точку из цены (123.0 -> 123) тупой баг квика
 			price = math.floor(price)
 		end
+		write_log('price open position '..tool['SEC']..': '..tool['priceOpen'], logFileName) 
 		SendOrder(buy_sell, price, tool['lots'], tool['CLASS'], tool['SEC'], TRADE_ACC, uniq_trans_id, logFileName) -- выставляем заявку
 	end
 end
