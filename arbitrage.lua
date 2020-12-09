@@ -29,8 +29,8 @@ arTools[3] = {
 	['bid_offer'] = "OFFER"															-- цена из стакана для расчета коэффициента "BID" - спрос, - "OFFER" - предложение
 }
 -------------------------------------
-kOpen = -70																			-- значение коэффициента для открытия позиций(если превышает открываем позиции)
-kClose = -100																		-- значение коэффициента для закрытия позиций (если становится меньше закрываем позиции)
+kOpen = 170																			-- значение коэффициента для открытия позиций(если превышает открываем позиции)
+kClose = -180																		-- значение коэффициента для закрытия позиций (если становится меньше закрываем позиции)
 profitClose = 10																	-- суммарный профит по всем инструментам для закрытия позиции
 logCountLoop = 30																	-- номер прохода для логирования расчета коэффициента
 -------------------------------------														
@@ -86,9 +86,10 @@ function main()
 					profit = profit + tonumber(tool['priceOpen']) - tonumber(prices[key])
 				end
 			end
+			logStr = logStr..' profit: '..profit
 		end
 		k = getK(prices)
-		if loop == logCountLoop and k ~= nil then												-- на каждом указанном в logCountLoop шаге пишем лог расчета коэффициента
+		if loop == logCountLoop and k ~= nil then									-- на каждом указанном в logCountLoop шаге пишем лог расчета коэффициента
 			logStr = logStr..' -> k = '..k
 			write_log(logStr, logFileName)
 			loop = 0
@@ -99,7 +100,7 @@ function main()
 		elseif k ~=nil and isOpenPosition == false and k > kOpen then				-- если позиция не открыта и коэффициент более заданного в параметре kOpen -> открываем позицию
 			write_log("k = "..k.." -> open position", logFileName)
 			for key, tool in pairs(arTools) do										-- при открытии позиций записываем текущие цены инструментов для расчета профита
-				tools[key]['priceOpen'] = prices[key]
+				tool['priceOpen'] = prices[key]
 			end
 			open_closePosition('open')
 		end
