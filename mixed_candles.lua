@@ -25,10 +25,55 @@ isOpenPosition = false																-- открыта позиция
 dofile(getScriptPath().."\\func\\functions.lua")									-- подключаем набор функций
 is_run = true
 -------------------------------------------------------------------------------------------------------------------------------------
+-- Справочник интервалов для выбора свечного графика
+-- INTERVAL_TICK	-	Тиковые данные
+-- INTERVAL_M1		-	1 минута
+-- INTERVAL_M2		-	2 минуты
+-- INTERVAL_M3		-	3 минуты
+-- INTERVAL_M4		-	4 минуты
+-- INTERVAL_M5		-	5 минут
+-- INTERVAL_M6		-	6 минут
+-- INTERVAL_M10		-	10 минут
+-- INTERVAL_M15		-	15 минут
+-- INTERVAL_M20		-	20 минут
+-- INTERVAL_M30		-	30 минут
+-- INTERVAL_H1		-	1 час
+-- INTERVAL_H2		-	2 часа
+-- INTERVAL_H4		-	4 часа
+-- INTERVAL_D1		-	1 день
+-- INTERVAL_W1		-	1 неделя
+-- INTERVAL_MN1		-	1 месяц
+
+candleInterval = 'INTERVAL_H1'														-- задаем интервал для свечного графика
+-------------------------------------------------------------------------------------------------------------------------------------
 
 function main()
-	while is_run do 
-		sleep(100) 
+	while is_run do
+		local candle_up = {}
+		for key, tool in pairs(arTools) do
+			ds = CreateDataSource(tool['CLASS'], tool['SEC'], candleInterval)		-- получаем график - свечи по каждому инстументу
+			if ds:Size() ~= nil then
+				price_O = ds:O(ds:Size()-1)											-- получаем цену открытия предыдущей свечи с графика
+				price_C = ds:C(ds:Size()-1)											-- получаем цену закрытия предыдущей свечи с графика
+				if tonumber(price_O) < tonumber(price_C) then						-- price_O < price_C -> свеча растущая
+					candle_up[key] = true
+				else
+					candle_up[key] = false
+				end
+			else
+				tool['candle_up'] = nil
+			end
+		end
+		if candle_up[1] ~= candle_up[2] then										-- если свечи разнонаправленные
+			for key, tool in pairs(arTools) do
+				if candle_up[key] == true then										-- если свеча растущая продаем, иначе покупаем
+					tool['buy_sell'] = 'S'
+				else
+					tool['buy_sell'] = 'B'
+				end
+			end
+		end
+		sleep(1000)
 	end
 end
 
